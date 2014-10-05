@@ -9,3 +9,5 @@
 *.war
 *.ear
 /bin/
+
+/src/test
