@@ -24,17 +24,20 @@ public final class AsyncContext {
 
     }
 
+    /**
+     * Checks the state of the internal executors and acts accordingly
+     */
     private synchronized void checkExecutors () {
         int pendingEvents = eventLoop.getActiveCount() + eventLoop.getQueue().size();
         int pendingWorkers = workerPool.getActiveCount() + workerPool.getQueue().size();
-        
+
         /* If there are no pending workers, set worker threads to terminate early */
         if (pendingWorkers == 0) {
             workerPool.setKeepAliveTime(1, TimeUnit.SECONDS);
         } else {
             workerPool.setKeepAliveTime(10, TimeUnit.SECONDS);
         }
-        
+
         /* If there are no pending workers or events, set event thread to terminate early */
         if (pendingWorkers + pendingEvents == 0) {
             eventLoop.setKeepAliveTime(1, TimeUnit.MILLISECONDS);
@@ -44,6 +47,12 @@ public final class AsyncContext {
         }
     }
 
+    /**
+     * Runs the given <tt>task</tt> in the event thread of this context and returns a promise of its result.
+     * 
+     * @param task The task to be run
+     * @return A promise of the task result
+     */
     public <T> Promise<T> event (Supplier<T> task) {
         Deferred<T> def = new Deferred<T>();
         eventLoop.submit( () -> {
@@ -59,6 +68,12 @@ public final class AsyncContext {
         return def.promise();
     }
 
+    /**
+     * Runs the given <tt>task</tt> in the event thread of this context and returns a promise of its completion.
+     * 
+     * @param task The task to be run
+     * @return A promise of the task completion
+     */
     public Promise<Void> event (Runnable task) {
         return event( () -> {
             task.run();
@@ -66,6 +81,12 @@ public final class AsyncContext {
         });
     }
 
+    /**
+     * Runs the given <tt>task</tt> in a worker thread and returns a promise of its result.
+     * 
+     * @param task The task to be run
+     * @return A promise of the task result
+     */
     public <T> Promise<T> worker (Supplier<T> task) {
         Deferred<T> def = new Deferred<T>();
         workerPool.submit( () -> {
@@ -81,6 +102,12 @@ public final class AsyncContext {
         return def.promise();
     }
 
+    /**
+     * Runs the given <tt>task</tt> in a worker thread and returns a promise of its completion.
+     * 
+     * @param task The task to be run
+     * @return A promise of the task completion
+     */
     public Promise<Void> worker (Runnable task) {
         return worker( () -> {
             task.run();
@@ -103,6 +130,12 @@ public final class AsyncContext {
         return threadContexts.get();
     }
 
+    /**
+     * Create a new <tt>AsyncContext</tt> and run the given task on the event thread.
+     * 
+     * @param main The first event to be run
+     * @return A new context in which <tt>task</tt> will be run
+     */
     public static AsyncContext bootstrap (Runnable main) {
         AsyncContext ctx = new AsyncContext();
         ctx.event(main);
